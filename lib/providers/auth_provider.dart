@@ -1,59 +1,76 @@
-import 'package:dio/dio.dart';
+import 'dart:async';
+
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../core/token_storage.dart';
 import '../models/auth_state_model.dart';
 import '../services/auth_service.dart';
 
 class AuthNotifier extends StateNotifier<AuthStateModel> {
-  AuthNotifier({required AuthService authService, required TokenStorage tokenStorage})
+  AuthNotifier({required AuthService authService})
       : _authService = authService,
-        _tokenStorage = tokenStorage,
         super(const AuthStateModel(isAuthenticated: false, isLoading: true));
 
   final AuthService _authService;
-  final TokenStorage _tokenStorage;
+  StreamSubscription<User?>? _authSubscription;
 
   Future<void> bootstrap() async {
-    final token = await _tokenStorage.readToken();
-    state = state.copyWith(isAuthenticated: token != null && token.isNotEmpty, isLoading: false, error: null);
+    _authSubscription?.cancel();
+    _authSubscription = FirebaseAuth.instance.authStateChanges().listen(_onAuthStateChange);
+    _applyUser(FirebaseAuth.instance.currentUser);
   }
 
-  Future<bool> login(String email, String password) async {
-    state = state.copyWith(isLoading: true, error: null);
-    try {
-      final token = await _authService.login(email: email, password: password);
-      await _tokenStorage.saveToken(token);
-      state = state.copyWith(isAuthenticated: true, isLoading: false, error: null);
-      return true;
-    } on DioException catch (e) {
-      final detail = e.response?.data?.toString() ?? 'Login failed';
-      state = state.copyWith(isLoading: false, isAuthenticated: false, error: detail);
-      return false;
-    } catch (_) {
-      state = state.copyWith(isLoading: false, isAuthenticated: false, error: 'Login failed');
-      return false;
-    }
+  void _onAuthStateChange(User? user) {
+    _applyUser(user);
   }
 
-  Future<bool> register(String email, String password) async {
+  void _applyUser(User? user) {
+    state = state.copyWith(
+      isAuthenticated: user != null,
+      isLoading: false,
+      error: user != null ? null : state.error,
+    );
+  }
+
+  Future<bool> signInWithGoogle() async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      await _authService.register(email: email, password: password);
+      await _authService.signInWithGoogle();
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        state = state.copyWith(isAuthenticated: true, isLoading: false, error: null);
+        return true;
+      }
       state = state.copyWith(isLoading: false, error: null);
-      return true;
-    } on DioException catch (e) {
-      final detail = e.response?.data?.toString() ?? 'Registration failed';
-      state = state.copyWith(isLoading: false, error: detail);
       return false;
-    } catch (_) {
-      state = state.copyWith(isLoading: false, error: 'Registration failed');
+    } on FirebaseAuthException catch (e) {
+      debugPrint('Google sign-in failed: ${e.code} ${e.message}');
+      state = state.copyWith(
+        isLoading: false,
+        isAuthenticated: false,
+        error: kDebugMode ? 'Google sign-in failed: ${e.message}' : 'Google sign-in failed',
+      );
+      return false;
+    } catch (e) {
+      debugPrint('Google sign-in failed: $e');
+      state = state.copyWith(
+        isLoading: false,
+        isAuthenticated: false,
+        error: kDebugMode ? 'Google sign-in failed: $e' : 'Google sign-in failed',
+      );
       return false;
     }
   }
 
   Future<void> logout() async {
-    await _tokenStorage.clearToken();
+    await _authService.signOut();
     state = const AuthStateModel(isAuthenticated: false, isLoading: false);
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
   }
 }

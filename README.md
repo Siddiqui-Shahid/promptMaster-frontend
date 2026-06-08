@@ -8,37 +8,47 @@ Flutter client for [PromptMaster](https://github.com/Siddiqui-Shahid/promptMaste
 
 ```bash
 flutter pub get
+dart pub global activate flutterfire_cli
+firebase login
+flutterfire configure
 ```
 
-## Run (local API)
+`flutterfire configure` generates `lib/firebase_options.dart` for your Firebase project.
+
+Enable **Google** sign-in in Firebase Console → Authentication → Sign-in method.
+
+Add authorized domains: `localhost`, `siddiqui-shahid.github.io` (Authentication → Settings).
+
+## Run (local API + Firebase Google auth)
 
 ```bash
-flutter run -d chrome --dart-define=API_BASE_URL=http://127.0.0.1:8000
+flutter run -d chrome --web-port=3000 \
+  --dart-define=API_BASE_URL=http://127.0.0.1:8000
 ```
 
 ## Run (production API)
 
 ```bash
-flutter run -d chrome --dart-define=API_BASE_URL=https://your-api.example.com
+flutter run -d chrome \
+  --dart-define=API_BASE_URL=https://your-api.example.com
 ```
 
-API base URL is configured in `lib/core/api_config.dart` via the `API_BASE_URL` dart-define.
+- `API_BASE_URL` → FastAPI backend URL
+- Firebase config lives in `lib/firebase_options.dart` (from FlutterFire CLI)
 
 ## Deploy web (GitHub Pages)
 
-Hosting uses **GitHub Actions** only (no Netlify/Vercel/Railway for the frontend).
+Hosting uses **GitHub Actions** only.
 
 ### One-time setup
 
-1. **GitHub secret** (repo → Settings → Secrets and variables → Actions):
-   - `API_BASE_URL` = your Railway API URL, e.g. `https://your-app.up.railway.app` (no trailing slash)
+1. **GitHub secrets** (repo → Settings → Secrets and variables → Actions):
+   - `API_BASE_URL` = your deployed API URL (no trailing slash)
 
 2. **Enable Pages** (repo → Settings → Pages → Build and deployment):
    - Source: **GitHub Actions**
 
-3. **Private repo:** GitHub Pages on a private repo requires **GitHub Pro** (or make the repo public on Free).
-
-4. **Railway CORS** (API service → Variables), after the first deploy:
+3. **Railway CORS** (API service → Variables), after the first deploy:
    - `CORS_ALLOWED_ORIGINS=https://siddiqui-shahid.github.io`
    - Redeploy the API if needed
 

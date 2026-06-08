@@ -1,28 +1,26 @@
-import 'package:dio/dio.dart';
-import 'api_client.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 class AuthService {
-  AuthService(this._apiClient);
-  final ApiClient _apiClient;
+  FirebaseAuth get _auth => FirebaseAuth.instance;
 
-  Future<String> login({required String email, required String password}) async {
-    final response = await _apiClient.dio.post(
-      '/auth/jwt/login',
-      data: {'username': email, 'password': password},
-      options: Options(contentType: Headers.formUrlEncodedContentType),
-    );
-
-    final token = response.data['access_token'] as String?;
-    if (token == null || token.isEmpty) {
-      throw DioException(
-        requestOptions: response.requestOptions,
-        message: 'Invalid login response',
-      );
-    }
-    return token;
+  Future<String?> getIdToken({bool forceRefresh = false}) async {
+    final user = _auth.currentUser;
+    if (user == null) return null;
+    return user.getIdToken(forceRefresh);
   }
 
-  Future<void> register({required String email, required String password}) async {
-    await _apiClient.dio.post('/auth/register', data: {'email': email, 'password': password});
+  bool get hasSession => _auth.currentUser != null;
+
+  Future<UserCredential> signInWithGoogle() async {
+    final provider = GoogleAuthProvider();
+    if (kIsWeb) {
+      return _auth.signInWithPopup(provider);
+    }
+    return _auth.signInWithProvider(provider);
+  }
+
+  Future<void> signOut() async {
+    await _auth.signOut();
   }
 }

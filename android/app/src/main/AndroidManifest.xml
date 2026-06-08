@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="business_prompt_platform"
+        android:label="Prompt Master"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

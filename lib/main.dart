@@ -1,16 +1,23 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/app_branding.dart';
+import 'firebase_options.dart';
 import 'providers/app_providers.dart';
 import 'routes/app_router.dart';
 import 'theme/app_theme.dart';
 
-void main() {
-  runApp(const ProviderScope(child: PromptPlatformApp()));
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  runApp(const ProviderScope(child: PromptMasterApp()));
 }
 
-class PromptPlatformApp extends ConsumerWidget {
-  const PromptPlatformApp({super.key});
+class PromptMasterApp extends ConsumerWidget {
+  const PromptMasterApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -18,7 +25,7 @@ class PromptPlatformApp extends ConsumerWidget {
     final auth = ref.watch(authNotifierProvider);
 
     return MaterialApp.router(
-      title: 'Business Prompt Platform',
+      title: AppBranding.name,
       theme: AppTheme.dark(),
       debugShowCheckedModeBanner: false,
       routerConfig: router,
