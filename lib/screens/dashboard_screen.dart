@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/api_log.dart';
 import '../models/prompt_generate_request.dart';
 import '../providers/app_providers.dart';
 import '../providers/prompt_provider.dart';
@@ -72,7 +73,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Future<void> _generate() async {
-    if (!_formKey.currentState!.validate()) return;
+    appLog('Dashboard: Generate Prompt tapped');
+    if (!_formKey.currentState!.validate()) {
+      appLog('Dashboard: form validation failed — fix highlighted fields');
+      return;
+    }
     FocusScope.of(context).unfocus();
     final request = PromptGenerateRequest(
       businessType: _trim(_businessType),
@@ -116,39 +121,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget build(BuildContext context) {
     final promptState = ref.watch(promptNotifierProvider);
     final isMobile = MediaQuery.of(context).size.width < 980;
-
-    Widget content = Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (isMobile) const AppLogo(size: 36, compact: true),
-          if (isMobile) const SizedBox(height: 12),
-          if (promptState.error != null) ...[
-            ErrorState(message: promptState.error!),
-            const SizedBox(height: 12),
-          ],
-          Expanded(
-            child: isMobile
-                ? ListView(
-                    children: [
-                      _buildFormCard(promptState.isLoading),
-                      const SizedBox(height: 16),
-                      SizedBox(height: 500, child: _buildOutputPane(promptState)),
-                    ],
-                  )
-                : Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(flex: 4, child: _buildFormCard(promptState.isLoading)),
-                      const SizedBox(width: 16),
-                      Expanded(flex: 5, child: _buildOutputPane(promptState)),
-                    ],
-                  ),
-          ),
-        ],
-      ),
-    ).animate().fadeIn(duration: 220.ms);
+    final padding = isMobile ? 16.0 : 20.0;
 
     final side = Sidebar(
       onNewPrompt: _resetForNewPrompt,
@@ -162,9 +135,45 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           centerTitle: false,
         ),
         drawer: Drawer(child: SafeArea(child: side)),
-        body: content,
+        body: SafeArea(
+          child: ListView(
+            padding: EdgeInsets.all(padding),
+            children: [
+              if (promptState.error != null) ...[
+                ErrorState(message: promptState.error!),
+                const SizedBox(height: 12),
+              ],
+              _buildFormCard(promptState.isLoading, scrollable: false),
+              const SizedBox(height: 16),
+              _buildOutputPane(promptState, expand: false),
+            ],
+          ).animate().fadeIn(duration: 220.ms),
+        ),
       );
     }
+
+    final content = Padding(
+      padding: EdgeInsets.all(padding),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (promptState.error != null) ...[
+            ErrorState(message: promptState.error!),
+            const SizedBox(height: 12),
+          ],
+          Expanded(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(flex: 4, child: _buildFormCard(promptState.isLoading, scrollable: true)),
+                const SizedBox(width: 16),
+                Expanded(flex: 5, child: _buildOutputPane(promptState, expand: true)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ).animate().fadeIn(duration: 220.ms);
 
     return Scaffold(
       body: Row(
@@ -176,14 +185,27 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildFormCard(bool loading) {
+  Widget _buildFormCard(bool loading, {required bool scrollable}) {
+    final fields = _buildFormFields(loading);
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: Form(
           key: _formKey,
-          child: ListView(
-            children: [
+          child: scrollable
+              ? ListView(children: fields)
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: fields,
+                ),
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildFormFields(bool loading) {
+    return [
               FormSection(
                 title: 'Business profile',
                 subtitle: 'Who you are advising',
@@ -294,9 +316,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     controller: _additionalNotes,
                     focusNode: _additionalNotesFocus,
                     label: 'Additional Notes',
-                    hintText: 'Seasonality, team size, compliance…',
+                    hintText: 'Paste Google Maps listing, reviews, or any research (up to 100k chars)',
                     prefixIcon: Icons.note_add_outlined,
-                    maxLines: 3,
+                    maxLines: 8,
                     keyboardType: TextInputType.multiline,
                     textInputAction: TextInputAction.done,
                     onFieldSubmitted: (_) => _generate(),
@@ -310,11 +332,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 onPressed: _generate,
                 loading: loading,
               ),
-            ],
-          ),
-        ),
-      ),
-    );
+    ];
   }
 
   Widget _buildBudgetRow() {
@@ -367,12 +385,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildOutputPane(PromptState promptState) {
+  Widget _buildOutputPane(PromptState promptState, {required bool expand}) {
     if (promptState.isLoading) {
-      return Card(
+      final card = Card(
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
               const CircularProgressIndicator(),
               const SizedBox(height: 16),
@@ -381,6 +400,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
         ),
       );
+      return expand ? card : SizedBox(height: 200, child: card);
     }
 
     if (promptState.generated != null) {
@@ -388,6 +408,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       return PromptOutput(
         title: '${generated.title} • ${generated.promptVersion}',
         prompt: generated.generatedPrompt,
+        expand: expand,
         onCopy: () => _copy(generated.generatedPrompt),
         onLaunchMessage: (message) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
@@ -395,12 +416,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       );
     }
 
-    return const Card(
+    const card = Card(
       child: EmptyState(
         icon: Icons.auto_awesome_outlined,
         message: 'Fill in any fields you have, then tap Generate Prompt. Empty fields are skipped.',
       ),
     );
+    return expand ? card : const SizedBox(height: 160, child: card);
   }
 
   String? _validateBudgetMin(String? value) {

@@ -11,12 +11,14 @@ class PromptOutput extends StatelessWidget {
     required this.prompt,
     required this.onCopy,
     this.onLaunchMessage,
+    this.expand = true,
   });
 
   final String title;
   final String prompt;
   final VoidCallback onCopy;
   final void Function(String message)? onLaunchMessage;
+  final bool expand;
 
   Future<void> _openChatGpt(BuildContext context) async {
     final result = await launchChatGpt(prompt);
@@ -54,7 +56,12 @@ class PromptOutput extends StatelessWidget {
                       Icon(Icons.check_circle_outline, size: 20, color: Theme.of(context).colorScheme.primary),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: Text(title, style: Theme.of(context).textTheme.titleLarge),
+                        child: Text(
+                          title,
+                          style: Theme.of(context).textTheme.titleLarge,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ),
@@ -72,7 +79,7 @@ class PromptOutput extends StatelessWidget {
             Text('Open in your AI assistant', style: Theme.of(context).textTheme.bodyMedium),
             const SizedBox(height: 4),
             Text(
-              'Your prompt is copied automatically. Paste in the chat if it does not appear.',
+              'Paste in ChatGPT or Claude. Ask “write email” in the chat for outreach copy. Enable web search in the AI tool.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12),
             ),
             const SizedBox(height: 12),
@@ -98,27 +105,37 @@ class PromptOutput extends StatelessWidget {
               ],
             ),
             const Divider(height: 24),
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Theme.of(context).dividerColor),
-                ),
-                child: SingleChildScrollView(
-                  child: SelectableText(
-                    prompt,
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
-                ),
-              ),
-            ),
+            _buildPromptTextArea(context),
           ],
         ),
       ),
     ).animate().fadeIn(duration: 280.ms).slideY(begin: 0.03, end: 0);
+  }
+
+  Widget _buildPromptTextArea(BuildContext context) {
+    final content = Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Theme.of(context).dividerColor),
+      ),
+      child: SingleChildScrollView(
+        child: SelectableText(
+          prompt,
+          style: Theme.of(context).textTheme.bodyLarge,
+        ),
+      ),
+    );
+
+    if (expand) {
+      return Expanded(child: content);
+    }
+
+    final viewportHeight = MediaQuery.sizeOf(context).height;
+    final height = (viewportHeight * 0.5).clamp(280.0, 480.0);
+    return SizedBox(height: height, child: content);
   }
 }
 
@@ -208,7 +225,6 @@ class _AiLaunchButtonState extends State<_AiLaunchButton> {
   }
 }
 
-/// Square brand mark from asset (chatGPT.png / Claude.jpeg).
 class _BrandLogo extends StatelessWidget {
   const _BrandLogo({required this.path, required this.isGpt});
 

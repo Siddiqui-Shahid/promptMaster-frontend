@@ -53,11 +53,12 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyApzFgDSz1dmmq3RNqJRZRMA--njh6ZVyU',
-    appId: '1:1045104969746:web:412717b00c5c98161ab0cb',
-    messagingSenderId: '1045104969746',
-    projectId: 'promptmaster-497306',
-    authDomain: 'promptmaster-497306.firebaseapp.com',
-    storageBucket: 'promptmaster-497306.firebasestorage.app',
+    apiKey: 'AIzaSyA8mu9SXIAv5btYlKV0MFRyPqWfxS8RWLY',
+    appId: '1:59061135105:web:aca27e5f2e35bb52c6dd00',
+    messagingSenderId: '59061135105',
+    projectId: 'asdasdasdasdasdasdertghrh',
+    authDomain: 'asdasdasdasdasdasdertghrh.firebaseapp.com',
+    storageBucket: 'asdasdasdasdasdasdertghrh.firebasestorage.app',
+    measurementId: 'G-TXFG9VCB3W',
   );
 }

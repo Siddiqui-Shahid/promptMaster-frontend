@@ -2,6 +2,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/api_config.dart';
+import 'core/api_log.dart';
 import 'core/app_branding.dart';
 import 'firebase_options.dart';
 import 'providers/app_providers.dart';
@@ -11,7 +13,11 @@ import 'theme/app_theme.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  appLog('Starting ${AppBranding.name}');
+  appLog('API_BASE_URL=${ApiConfig.baseUrl}');
+
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  appLog('Firebase initialized project=${DefaultFirebaseOptions.currentPlatform.projectId}');
 
   runApp(const ProviderScope(child: PromptMasterApp()));
 }

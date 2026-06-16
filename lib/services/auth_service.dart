@@ -12,10 +12,26 @@ class AuthService {
 
   bool get hasSession => _auth.currentUser != null;
 
+  /// Completes a prior [signInWithRedirect] flow (web only).
+  Future<UserCredential?> getRedirectResult() async {
+    if (!kIsWeb) return null;
+    return _auth.getRedirectResult();
+  }
+
   Future<UserCredential> signInWithGoogle() async {
-    final provider = GoogleAuthProvider();
+    final provider = GoogleAuthProvider()..addScope('email');
     if (kIsWeb) {
-      return _auth.signInWithPopup(provider);
+      try {
+        return await _auth.signInWithPopup(provider);
+      } on FirebaseAuthException catch (e) {
+        if (e.code == 'popup-blocked' ||
+            e.code == 'popup-closed-by-user' ||
+            e.code == 'internal-error') {
+          await _auth.signInWithRedirect(provider);
+          throw const RedirectInProgress();
+        }
+        rethrow;
+      }
     }
     return _auth.signInWithProvider(provider);
   }
@@ -23,4 +39,9 @@ class AuthService {
   Future<void> signOut() async {
     await _auth.signOut();
   }
+}
+
+/// Thrown after [signInWithRedirect] — page reload will finish sign-in.
+class RedirectInProgress implements Exception {
+  const RedirectInProgress();
 }
