@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
@@ -11,6 +12,19 @@ class AuthService {
   }
 
   bool get hasSession => _auth.currentUser != null;
+
+  Future<bool> isAllowlisted(User user) async {
+    final email = user.email?.trim().toLowerCase();
+    if (email == null || email.isEmpty || !user.emailVerified) return false;
+    final snapshot = await FirebaseFirestore.instance
+        .collection('intern_allowlist')
+        .doc(email)
+        .get();
+    final data = snapshot.data();
+    return snapshot.exists &&
+        data?['active'] == true &&
+        data?['email']?.toString().trim().toLowerCase() == email;
+  }
 
   /// Completes a prior [signInWithRedirect] flow (web only).
   Future<UserCredential?> getRedirectResult() async {

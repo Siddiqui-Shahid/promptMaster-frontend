@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../models/prompt_generate_request.dart';
 import 'app_logo.dart';
 
 class Sidebar extends StatelessWidget {
@@ -7,10 +8,16 @@ class Sidebar extends StatelessWidget {
     super.key,
     required this.onNewPrompt,
     required this.onLogout,
+    required this.selectedFlow,
+    required this.onSelectFlow,
+    this.historyTitles = const [],
   });
 
   final VoidCallback onNewPrompt;
   final VoidCallback onLogout;
+  final OutreachFlow selectedFlow;
+  final ValueChanged<OutreachFlow> onSelectFlow;
+  final List<String> historyTitles;
 
   @override
   Widget build(BuildContext context) {
@@ -28,25 +35,50 @@ class Sidebar extends StatelessWidget {
             padding: EdgeInsets.symmetric(horizontal: 16),
             child: AppLogo(size: 44, compact: true),
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: 18),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: FilledButton.icon(
               onPressed: onNewPrompt,
               icon: const Icon(Icons.add_rounded, size: 20),
-              label: const Text('New Prompt'),
+              label: const Text('+ New Prompt'),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 18),
+          const Divider(height: 1, indent: 16, endIndent: 16),
+          const SizedBox(height: 10),
+          _sectionTitle(context, 'Research'),
+          _flowTile(context, OutreachFlow.linkedin, 'LinkedIn', Icons.link),
+          _flowTile(context, OutreachFlow.email, 'Email', Icons.email_outlined),
+          _flowTile(context, OutreachFlow.coldCall, 'Cold Call', Icons.phone_outlined),
+          _flowTile(context, OutreachFlow.coldMessage, 'Cold Message', Icons.chat_bubble_outline),
+          _flowTile(context, OutreachFlow.verification, 'Email Verification', Icons.verified_outlined),
+          _flowTile(context, OutreachFlow.legacy, 'Digital Audit', Icons.fact_check_outlined),
+          const SizedBox(height: 10),
+          const Divider(height: 1, indent: 16, endIndent: 16),
+          const SizedBox(height: 10),
+          _sectionTitle(context, 'History'),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16),
-            child: _NavHint(
-              icon: Icons.edit_note_outlined,
-              label: 'Fill the form, then generate',
+            child: Text('Recent Prompts'),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: ListView.builder(
+              itemCount: historyTitles.take(8).length,
+              itemBuilder: (context, index) => Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                child: Text(
+                  historyTitles[index],
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
             ),
           ),
-          const Spacer(),
           const Divider(height: 1, indent: 16, endIndent: 16),
+          _sectionTitle(context, 'Settings'),
           Padding(
             padding: const EdgeInsets.all(16),
             child: OutlinedButton.icon(
@@ -59,24 +91,32 @@ class Sidebar extends StatelessWidget {
       ),
     );
   }
-}
 
-class _NavHint extends StatelessWidget {
-  const _NavHint({required this.icon, required this.label});
+  Widget _sectionTitle(BuildContext context, String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Text(
+        title,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              letterSpacing: 0.5,
+              color: Theme.of(context).colorScheme.secondary,
+            ),
+      ),
+    );
+  }
 
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: Theme.of(context).colorScheme.secondary),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(label, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 13)),
-        ),
-      ],
+  Widget _flowTile(BuildContext context, OutreachFlow flow, String label, IconData icon) {
+    final selected = selectedFlow == flow;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      child: ListTile(
+        dense: true,
+        selected: selected,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        leading: Icon(icon, size: 18),
+        title: Text(label),
+        onTap: () => onSelectFlow(flow),
+      ),
     );
   }
 }

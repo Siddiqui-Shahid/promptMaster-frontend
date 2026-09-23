@@ -1,8 +1,11 @@
 # PromptMaster Frontend
 
-Flutter client for [PromptMaster](https://github.com/Siddiqui-Shahid/promptMaster).
+Flutter web app for PromptMaster. The production app is Firebase-only: Firebase
+Authentication handles Google login, Firestore enforces the intern allowlist,
+and Firebase Hosting serves the static Flutter build. Prompt templates are
+generated locally, so no FastAPI server is required.
 
-**API repo:** [promptMaster-backend](https://github.com/Siddiqui-Shahid/promptMaster-backend)
+**Live:** https://asdasdasdasdasdasdertghrh.web.app
 
 ## Setup
 
@@ -17,48 +20,38 @@ flutterfire configure
 
 Enable **Google** sign-in in Firebase Console → Authentication → Sign-in method.
 
-Add authorized domains: `localhost`, `siddiqui-shahid.github.io` (Authentication → Settings).
+Add `localhost` and your Firebase Hosting domain under Authentication → Settings
+→ Authorized domains.
 
-## Run (local API + Firebase Google auth)
-
-```bash
-flutter run -d chrome --web-port=3000 \
-  --dart-define=API_BASE_URL=http://127.0.0.1:8000
-```
-
-## Run (production API)
+## Run locally
 
 ```bash
-flutter run -d chrome \
-  --dart-define=API_BASE_URL=https://your-api.example.com
+flutter run -d chrome --web-port=3000
 ```
 
-- `API_BASE_URL` → FastAPI backend URL
-- Firebase config lives in `lib/firebase_options.dart` (from FlutterFire CLI)
+## Allow an intern
 
-## Deploy web (GitHub Pages)
+Create a document in the `intern_allowlist` Firestore collection:
 
-Hosting uses **GitHub Actions** only.
+- Document ID: the lowercase Google email address
+- `email`: the same lowercase address
+- `active`: `true`
+- `name`: display name (optional)
 
-### One-time setup
+Firestore rules only let a signed-in, email-verified user read their own active
+allowlist document. Browsing or editing the collection from the app is denied.
 
-1. **GitHub secrets** (repo → Settings → Secrets and variables → Actions):
-   - `API_BASE_URL` = your deployed API URL (no trailing slash)
+## Test and deploy
 
-2. **Enable Pages** (repo → Settings → Pages → Build and deployment):
-   - Source: **GitHub Actions**
+```bash
+flutter analyze --no-fatal-infos
+flutter test
+flutter build web --release --base-href /
+firebase deploy --only firestore:rules,hosting
+```
 
-3. **Railway CORS** (API service → Variables), after the first deploy:
-   - `CORS_ALLOWED_ORIGINS=https://siddiqui-shahid.github.io`
-   - Redeploy the API if needed
-
-### Deploy
-
-Push to `main`. The workflow `.github/workflows/deploy-web.yml` builds and publishes to:
-
-`https://siddiqui-shahid.github.io/promptMaster-frontend/`
-
-Check progress under **Actions**; the live URL appears under **Settings → Pages**.
+The current setup fits Firebase's Spark free tier for a small internal app,
+provided usage stays within the published free quotas.
 
 ## Monorepo
 

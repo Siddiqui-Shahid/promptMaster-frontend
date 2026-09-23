@@ -19,37 +19,60 @@ class AuthNotifier extends StateNotifier<AuthStateModel> {
   Future<void> bootstrap() async {
     appLog('Auth bootstrap…');
     _authSubscription?.cancel();
-    _authSubscription = FirebaseAuth.instance.authStateChanges().listen(_onAuthStateChange);
+    _authSubscription =
+        FirebaseAuth.instance.authStateChanges().listen(_onAuthStateChange);
 
     try {
       final redirectResult = await _authService.getRedirectResult();
       if (redirectResult?.user != null) {
         appLog('Auth: redirect sign-in user=${redirectResult!.user!.uid}');
-        _applyUser(redirectResult.user);
+        await _applyUser(redirectResult.user);
         return;
       }
     } catch (e) {
       appLog('Auth: redirect sign-in failed — $e');
     }
 
-    _applyUser(FirebaseAuth.instance.currentUser);
+    await _applyUser(FirebaseAuth.instance.currentUser);
   }
 
   void _onAuthStateChange(User? user) {
-    _applyUser(user);
+    unawaited(_applyUser(user));
   }
 
-  void _applyUser(User? user) {
-    appLog(
-      user == null
-          ? 'Auth: signed out'
-          : 'Auth: signed in uid=${user.uid} email=${user.email ?? "(none)"}',
-    );
-    state = state.copyWith(
-      isAuthenticated: user != null,
-      isLoading: false,
-      error: user != null ? null : state.error,
-    );
+  Future<void> _applyUser(User? user) async {
+    if (user == null) {
+      appLog('Auth: signed out');
+      state = state.copyWith(
+          isAuthenticated: false, isLoading: false, error: state.error);
+      return;
+    }
+
+    appLog('Auth: checking allowlist email=${user.email ?? "(none)"}');
+    state =
+        state.copyWith(isAuthenticated: false, isLoading: true, error: null);
+    try {
+      if (await _authService.isAllowlisted(user)) {
+        state = state.copyWith(
+            isAuthenticated: true, isLoading: false, error: null);
+        return;
+      }
+      await _authService.signOut();
+      state = state.copyWith(
+        isAuthenticated: false,
+        isLoading: false,
+        error: 'This Google account is not approved for Prompt Master.',
+      );
+    } on FirebaseException catch (error) {
+      await _authService.signOut();
+      state = state.copyWith(
+        isAuthenticated: false,
+        isLoading: false,
+        error: error.code == 'permission-denied'
+            ? 'This Google account is not approved for Prompt Master.'
+            : 'Could not verify access. Please try again.',
+      );
+    }
   }
 
   Future<bool> signInWithGoogle() async {
@@ -60,8 +83,8 @@ class AuthNotifier extends StateNotifier<AuthStateModel> {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
         appLog('Auth: Google sign-in OK uid=${user.uid}');
-        state = state.copyWith(isAuthenticated: true, isLoading: false, error: null);
-        return true;
+        await _applyUser(user);
+        return state.isAuthenticated;
       }
       appLog('Auth: Google sign-in returned no user');
       state = state.copyWith(isLoading: false, error: null);
@@ -76,7 +99,9 @@ class AuthNotifier extends StateNotifier<AuthStateModel> {
       state = state.copyWith(
         isLoading: false,
         isAuthenticated: false,
-        error: kDebugMode ? 'Google sign-in failed: ${e.message}' : 'Google sign-in failed',
+        error: kDebugMode
+            ? 'Google sign-in failed: ${e.message}'
+            : 'Google sign-in failed',
       );
       return false;
     } catch (e) {
@@ -85,7 +110,8 @@ class AuthNotifier extends StateNotifier<AuthStateModel> {
       state = state.copyWith(
         isLoading: false,
         isAuthenticated: false,
-        error: kDebugMode ? 'Google sign-in failed: $e' : 'Google sign-in failed',
+        error:
+            kDebugMode ? 'Google sign-in failed: $e' : 'Google sign-in failed',
       );
       return false;
     }

@@ -1,47 +1,200 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../core/app_assets.dart';
 import '../utils/ai_launcher.dart';
 
-class PromptOutput extends StatelessWidget {
+class PromptOutput extends StatefulWidget {
   const PromptOutput({
     super.key,
     required this.title,
     required this.prompt,
     required this.onCopy,
+    this.stagePrompts = const [],
+    this.usageHint = '',
+    this.flow = '',
     this.onLaunchMessage,
     this.expand = true,
   });
 
   final String title;
   final String prompt;
+  final List<String> stagePrompts;
+  final String usageHint;
+  final String flow;
   final VoidCallback onCopy;
   final void Function(String message)? onLaunchMessage;
   final bool expand;
 
-  Future<void> _openChatGpt(BuildContext context) async {
-    final result = await launchChatGpt(prompt);
-    if (!context.mounted) return;
-    _handleResult(context, result);
+  @override
+  State<PromptOutput> createState() => _PromptOutputState();
+}
+
+class _PromptOutputState extends State<PromptOutput>
+    with SingleTickerProviderStateMixin {
+  TabController? _tabController;
+
+  bool get _hasStageTabs => _stagePromptCount > 0;
+
+  int get _stagePromptCount {
+    if (widget.flow == 'linkedin' && widget.stagePrompts.length >= 2) {
+      return 2;
+    }
+    if (widget.flow == 'legacy' && widget.stagePrompts.length >= 5) {
+      return 5;
+    }
+    if (widget.flow == 'legacy' && widget.stagePrompts.length >= 2) {
+      return widget.stagePrompts.length.clamp(2, 5);
+    }
+    if (widget.stagePrompts.length >= 3) {
+      return 3;
+    }
+    return 0;
   }
 
-  Future<void> _openClaude(BuildContext context) async {
-    final result = await launchClaude(prompt);
-    if (!context.mounted) return;
-    _handleResult(context, result);
+  int get _tabCount {
+    return _hasStageTabs ? _stagePromptCount : 0;
   }
 
-  void _handleResult(BuildContext context, AiLaunchResult result) {
+  List<String> get _tabLabels {
+    final labels = <String>[];
+    if (_hasStageTabs) {
+      if (widget.flow == 'linkedin') {
+        labels.addAll(const [
+          'Stage 1 — Research',
+          'Stage 2 — Raw TSV line',
+        ]);
+      } else if (widget.flow == 'legacy') {
+        labels.addAll(const [
+          'Stage 1 — Discovery',
+          'Stage 2 — Digital Presence',
+          'Stage 3 — Journey & Ops',
+          'Stage 4 — Opportunities',
+          'Stage 5 — Report & Email',
+        ].take(widget.stagePrompts.length.clamp(2, 5)));
+      } else if (widget.flow == 'cold_call') {
+        labels.addAll(const [
+          'Stage 1 — Research & Reviews',
+          'Stage 2 — Opportunities',
+          'Stage 3 — Call Script',
+        ]);
+      } else {
+        labels.addAll(const [
+          'Stage 1 — Research',
+          'Stage 2 — Opportunities',
+          'Stage 3 — Email',
+        ]);
+      }
+    }
+    return labels;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _initTabs();
+  }
+
+  int _tabCountForWidget(PromptOutput w) {
+    var count = 0;
+    if (w.flow == 'linkedin' && w.stagePrompts.length >= 2) {
+      count += 2;
+    } else if (w.flow == 'legacy' && w.stagePrompts.length >= 2) {
+      count += w.stagePrompts.length.clamp(2, 5);
+    } else if (w.stagePrompts.length >= 3) {
+      count += 3;
+    }
+    return count;
+  }
+
+  @override
+  void didUpdateWidget(covariant PromptOutput oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_tabCountForWidget(oldWidget) != _tabCount ||
+        oldWidget.flow != widget.flow) {
+      _tabController?.dispose();
+      _initTabs();
+    }
+  }
+
+  void _initTabs() {
+    if (_tabCount > 1) {
+      _tabController = TabController(length: _tabCount, vsync: this);
+    } else {
+      _tabController = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    _tabController?.dispose();
+    super.dispose();
+  }
+
+  String get _activePrompt {
+    if (_hasStageTabs && _tabController != null) {
+      return widget.stagePrompts[_tabController!.index];
+    }
+    return widget.prompt;
+  }
+
+  String get _defaultUsageHint {
+    if (_hasStageTabs) {
+      if (widget.flow == 'linkedin') {
+        return 'Run Stage 1 then Stage 2 in the same AI chat. Stage 2 = one raw line (3 tabs, no header) — paste into Sheets.';
+      }
+      if (widget.flow == 'legacy') {
+        return 'Run Stages 1–5 in the same AI chat with web search. Stage 5 = report + APPS_SCRIPT_PAYLOAD JSON (2 follow-ups).';
+      }
+      if (widget.flow == 'cold_call') {
+        return 'Run stages in order in the same AI chat. Stage 3 has your script and sticky notes for tough moments.';
+      }
+      return 'Run stages in order. Stage 3 JSON → Google Sheet → Import. Max 350 emails/day via Apps Script.';
+    }
+    return 'Paste in ChatGPT or Claude. Enable web search in the AI tool.';
+  }
+
+  Future<void> _openChatGpt() async {
+    final result = await launchChatGpt(_activePrompt);
+    if (!mounted) return;
+    _handleResult(result);
+  }
+
+  Future<void> _openClaude() async {
+    final result = await launchClaude(_activePrompt);
+    if (!mounted) return;
+    _handleResult(result);
+  }
+
+  void _handleResult(AiLaunchResult result) {
     if (!result.success) {
-      onLaunchMessage?.call(result.message ?? 'Could not open link');
+      widget.onLaunchMessage?.call(result.message ?? 'Could not open link');
       return;
     }
-    onLaunchMessage?.call(result.message ?? 'Opened');
+    widget.onLaunchMessage?.call(result.message ?? 'Opened');
+  }
+
+  void _copyActive() {
+    Clipboard.setData(ClipboardData(text: _activePrompt));
+    widget.onCopy();
+  }
+
+  double _scrollablePanelHeight(BuildContext context) {
+    final viewportHeight = MediaQuery.sizeOf(context).height;
+    return (viewportHeight * 0.45).clamp(280.0, 420.0);
+  }
+
+  Widget _expandOrSized({required bool expand, required Widget child}) {
+    if (expand) return Expanded(child: child);
+    return SizedBox(height: _scrollablePanelHeight(context), child: child);
   }
 
   @override
   Widget build(BuildContext context) {
+    final usageHint =
+        widget.usageHint.isNotEmpty ? widget.usageHint : _defaultUsageHint;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(18),
@@ -53,11 +206,13 @@ class PromptOutput extends StatelessWidget {
                 Expanded(
                   child: Row(
                     children: [
-                      Icon(Icons.check_circle_outline, size: 20, color: Theme.of(context).colorScheme.primary),
+                      Icon(Icons.check_circle_outline,
+                          size: 20,
+                          color: Theme.of(context).colorScheme.primary),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          title,
+                          widget.title,
                           style: Theme.of(context).textTheme.titleLarge,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -67,45 +222,61 @@ class PromptOutput extends StatelessWidget {
                   ),
                 ),
                 Tooltip(
-                  message: 'Copy prompt',
+                  message: 'Copy active prompt',
                   child: IconButton.filledTonal(
-                    onPressed: onCopy,
+                    onPressed: _copyActive,
                     icon: const Icon(Icons.copy_rounded, size: 20),
                   ),
                 ),
               ],
             ),
+            if (_tabCount > 1 && _tabController != null) ...[
+              const SizedBox(height: 12),
+              TabBar(
+                controller: _tabController,
+                isScrollable: true,
+                tabAlignment: TabAlignment.start,
+                onTap: (_) => setState(() {}),
+                tabs: _tabLabels.map((label) => Tab(text: label)).toList(),
+              ),
+            ],
             const SizedBox(height: 14),
-            Text('Open in your AI assistant', style: Theme.of(context).textTheme.bodyMedium),
-            const SizedBox(height: 4),
-            Text(
-              'Paste in ChatGPT or Claude. Ask “write email” in the chat for outreach copy. Enable web search in the AI tool.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _AiLaunchButton(
-                    label: 'ChatGPT',
-                    assetPath: AppAssets.chatGptIcon,
-                    style: _AiButtonStyle.chatGpt,
-                    onPressed: () => _openChatGpt(context),
+            ...[
+              Text('Open in your AI assistant',
+                  style: Theme.of(context).textTheme.bodyMedium),
+              const SizedBox(height: 4),
+              Text(
+                usageHint,
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyMedium
+                    ?.copyWith(fontSize: 12),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _AiLaunchButton(
+                      label: 'ChatGPT',
+                      assetPath: AppAssets.chatGptIcon,
+                      style: _AiButtonStyle.chatGpt,
+                      onPressed: _openChatGpt,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _AiLaunchButton(
-                    label: 'Claude',
-                    assetPath: AppAssets.claudeIcon,
-                    style: _AiButtonStyle.claude,
-                    onPressed: () => _openClaude(context),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _AiLaunchButton(
+                      label: 'Claude',
+                      assetPath: AppAssets.claudeIcon,
+                      style: _AiButtonStyle.claude,
+                      onPressed: _openClaude,
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const Divider(height: 24),
-            _buildPromptTextArea(context),
+                ],
+              ),
+              const Divider(height: 24),
+              _buildPromptTextArea(context),
+            ],
           ],
         ),
       ),
@@ -123,19 +294,16 @@ class PromptOutput extends StatelessWidget {
       ),
       child: SingleChildScrollView(
         child: SelectableText(
-          prompt,
+          _activePrompt,
           style: Theme.of(context).textTheme.bodyLarge,
         ),
       ),
     );
 
-    if (expand) {
-      return Expanded(child: content);
-    }
-
-    final viewportHeight = MediaQuery.sizeOf(context).height;
-    final height = (viewportHeight * 0.5).clamp(280.0, 480.0);
-    return SizedBox(height: height, child: content);
+    return _expandOrSized(
+      expand: widget.expand,
+      child: content,
+    );
   }
 }
 
@@ -240,7 +408,9 @@ class _BrandLogo extends StatelessWidget {
       height: _size,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
-        border: isGpt ? Border.all(color: Colors.white.withValues(alpha: 0.35), width: 1) : null,
+        border: isGpt
+            ? Border.all(color: Colors.white.withValues(alpha: 0.35), width: 1)
+            : null,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.25),
