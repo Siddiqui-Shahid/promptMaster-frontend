@@ -1,6 +1,5 @@
 class PromptGenerateResponse {
   PromptGenerateResponse({
-    required this.success,
     required this.flow,
     required this.businessCategory,
     required this.detectedProblems,
@@ -13,7 +12,6 @@ class PromptGenerateResponse {
     required this.businessType,
   });
 
-  final bool success;
   final String flow;
   final String businessCategory;
   final List<String> detectedProblems;
@@ -33,20 +31,4 @@ class PromptGenerateResponse {
 
   bool get hasMultiStagePrompts =>
       hasLinkedInStages || hasEmailStages || hasColdCallStages;
-
-  factory PromptGenerateResponse.fromJson(Map<String, dynamic> json) {
-    return PromptGenerateResponse(
-      success: json['success'] as bool,
-      flow: json['flow'] as String? ?? 'legacy',
-      businessCategory: json['business_category'] as String,
-      detectedProblems: (json['detected_problems'] as List).map((e) => e.toString()).toList(),
-      recommendedSoftware: (json['recommended_software'] as List).map((e) => e.toString()).toList(),
-      generatedPrompt: json['generated_prompt'] as String,
-      stagePrompts: (json['stage_prompts'] as List?)?.map((e) => e.toString()).toList() ?? const [],
-      usageHint: json['usage_hint'] as String? ?? '',
-      promptVersion: json['prompt_version'] as String,
-      title: json['title'] as String,
-      businessType: json['business_type'] as String,
-    );
-  }
 }

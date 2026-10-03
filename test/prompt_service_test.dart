@@ -12,6 +12,7 @@ void main() {
       OutreachFlow.coldCall: 3,
       OutreachFlow.coldMessage: 1,
       OutreachFlow.legacy: 5,
+      OutreachFlow.brainstorm: 2,
     };
 
     for (final entry in expectedStages.entries) {
@@ -23,12 +24,39 @@ void main() {
           website: 'https://acme.example',
           linkedinUrl: 'https://linkedin.com/in/jane',
           biggestProblem: 'Manual reporting',
+          deliveryLevel: DeliveryLevel.sprint,
         ),
       );
-      expect(result.success, isTrue);
       expect(result.stagePrompts, hasLength(entry.value));
       expect(result.generatedPrompt, contains('Acme'));
-      expect(result.promptVersion, 'firebase-static-v1');
+      expect(result.generatedPrompt, contains('CYFUR DELIVERY STANDARD'));
+      expect(result.generatedPrompt, contains('14 calendar days'));
+      expect(result.generatedPrompt, isNot(contains('one person')));
+      expect(result.generatedPrompt, isNot(contains('part-time')));
+      expect(result.promptVersion, 'cyfur-guardrail-v2');
+    }
+  });
+
+  test('applies every delivery level without exposing staffing assumptions',
+      () async {
+    final service = PromptService();
+
+    for (final level in DeliveryLevel.values) {
+      final result = await service.generatePrompt(
+        PromptGenerateRequest(
+          flow: OutreachFlow.brainstorm,
+          deliveryLevel: level,
+          companyName: 'Acme',
+          biggestProblem: 'Manual reporting',
+        ),
+      );
+
+      expect(result.generatedPrompt, contains(level.label));
+      expect(result.generatedPrompt, contains(level.promptInstruction));
+      expect(
+          result.generatedPrompt.toLowerCase(), isNot(contains('one person')));
+      expect(
+          result.generatedPrompt.toLowerCase(), isNot(contains('part-time')));
     }
   });
 }

@@ -41,6 +41,9 @@ class _PromptOutputState extends State<PromptOutput>
     if (widget.flow == 'linkedin' && widget.stagePrompts.length >= 2) {
       return 2;
     }
+    if (widget.flow == 'brainstorm' && widget.stagePrompts.length >= 2) {
+      return 2;
+    }
     if (widget.flow == 'legacy' && widget.stagePrompts.length >= 5) {
       return 5;
     }
@@ -64,6 +67,11 @@ class _PromptOutputState extends State<PromptOutput>
         labels.addAll(const [
           'Stage 1 — Research',
           'Stage 2 — Raw TSV line',
+        ]);
+      } else if (widget.flow == 'brainstorm') {
+        labels.addAll(const [
+          'Stage 1 — Opportunity',
+          'Stage 2 — Solution Lab',
         ]);
       } else if (widget.flow == 'legacy') {
         labels.addAll(const [
@@ -99,6 +107,8 @@ class _PromptOutputState extends State<PromptOutput>
   int _tabCountForWidget(PromptOutput w) {
     var count = 0;
     if (w.flow == 'linkedin' && w.stagePrompts.length >= 2) {
+      count += 2;
+    } else if (w.flow == 'brainstorm' && w.stagePrompts.length >= 2) {
       count += 2;
     } else if (w.flow == 'legacy' && w.stagePrompts.length >= 2) {
       count += w.stagePrompts.length.clamp(2, 5);

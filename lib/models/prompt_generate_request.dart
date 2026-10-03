@@ -1,10 +1,32 @@
+enum DeliveryLevel {
+  quickWin,
+  sprint,
+  advisory;
+
+  String get label => switch (this) {
+        DeliveryLevel.quickWin => 'Quick win (3-5 days)',
+        DeliveryLevel.sprint => 'Focused sprint (up to 14 days)',
+        DeliveryLevel.advisory => 'Advisory roadmap (no build commitment)',
+      };
+
+  String get promptInstruction => switch (this) {
+        DeliveryLevel.quickWin =>
+          'Recommend one narrow improvement that can be validated in 3-5 working days.',
+        DeliveryLevel.sprint =>
+          'Recommend a focused outcome that can be delivered within 14 calendar days.',
+        DeliveryLevel.advisory =>
+          'Provide discovery, prioritization, and a roadmap only; do not imply implementation is included.',
+      };
+}
+
 enum OutreachFlow {
   linkedin,
   email,
   verification,
   legacy,
   coldCall,
-  coldMessage;
+  coldMessage,
+  brainstorm;
 
   String get apiValue => switch (this) {
         OutreachFlow.coldCall => 'cold_call',
@@ -16,6 +38,7 @@ enum OutreachFlow {
 class PromptGenerateRequest {
   PromptGenerateRequest({
     this.flow = OutreachFlow.legacy,
+    this.deliveryLevel = DeliveryLevel.sprint,
     this.linkedinUrl = '',
     this.companyName = '',
     this.website = '',
@@ -32,10 +55,10 @@ class PromptGenerateRequest {
     this.additionalNotes = '',
     this.budgetMin,
     this.budgetMax,
-    this.force = false,
   });
 
   final OutreachFlow flow;
+  final DeliveryLevel deliveryLevel;
   final String linkedinUrl;
   final String companyName;
   final String website;
@@ -52,35 +75,11 @@ class PromptGenerateRequest {
   final String additionalNotes;
   final int? budgetMin;
   final int? budgetMax;
-  final bool force;
-
-  PromptGenerateRequest copyWith({bool? force}) {
-    return PromptGenerateRequest(
-      flow: flow,
-      linkedinUrl: linkedinUrl,
-      companyName: companyName,
-      website: website,
-      contactName: contactName,
-      contactEmail: contactEmail,
-      contactRole: contactRole,
-      businessType: businessType,
-      businessSize: businessSize,
-      location: location,
-      currentProcess: currentProcess,
-      biggestProblem: biggestProblem,
-      currentSoftware: currentSoftware,
-      targetGoal: targetGoal,
-      additionalNotes: additionalNotes,
-      budgetMin: budgetMin,
-      budgetMax: budgetMax,
-      force: force ?? this.force,
-    );
-  }
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{
       'flow': flow.apiValue,
-      'force': force,
+      'delivery_level': deliveryLevel.name,
       'linkedin_url': linkedinUrl,
       'company_name': companyName,
       'website': website,

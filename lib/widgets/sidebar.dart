@@ -25,7 +25,8 @@ class Sidebar extends StatelessWidget {
       width: 280,
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        border: Border(right: BorderSide(color: Colors.white.withValues(alpha: 0.08))),
+        border: Border(
+            right: BorderSide(color: Colors.white.withValues(alpha: 0.08))),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -50,10 +51,16 @@ class Sidebar extends StatelessWidget {
           _sectionTitle(context, 'Research'),
           _flowTile(context, OutreachFlow.linkedin, 'LinkedIn', Icons.link),
           _flowTile(context, OutreachFlow.email, 'Email', Icons.email_outlined),
-          _flowTile(context, OutreachFlow.coldCall, 'Cold Call', Icons.phone_outlined),
-          _flowTile(context, OutreachFlow.coldMessage, 'Cold Message', Icons.chat_bubble_outline),
-          _flowTile(context, OutreachFlow.verification, 'Email Verification', Icons.verified_outlined),
-          _flowTile(context, OutreachFlow.legacy, 'Digital Audit', Icons.fact_check_outlined),
+          _flowTile(context, OutreachFlow.coldCall, 'Cold Call',
+              Icons.phone_outlined),
+          _flowTile(context, OutreachFlow.coldMessage, 'Cold Message',
+              Icons.chat_bubble_outline),
+          _flowTile(context, OutreachFlow.verification, 'Email Verification',
+              Icons.verified_outlined),
+          _flowTile(context, OutreachFlow.legacy, 'Digital Audit',
+              Icons.fact_check_outlined),
+          _flowTile(context, OutreachFlow.brainstorm, 'Brainstorm',
+              Icons.lightbulb_outline_rounded),
           const SizedBox(height: 10),
           const Divider(height: 1, indent: 16, endIndent: 16),
           const SizedBox(height: 10),
@@ -67,7 +74,8 @@ class Sidebar extends StatelessWidget {
             child: ListView.builder(
               itemCount: historyTitles.take(8).length,
               itemBuilder: (context, index) => Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
                 child: Text(
                   historyTitles[index],
                   maxLines: 1,
@@ -105,7 +113,8 @@ class Sidebar extends StatelessWidget {
     );
   }
 
-  Widget _flowTile(BuildContext context, OutreachFlow flow, String label, IconData icon) {
+  Widget _flowTile(
+      BuildContext context, OutreachFlow flow, String label, IconData icon) {
     final selected = selectedFlow == flow;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),

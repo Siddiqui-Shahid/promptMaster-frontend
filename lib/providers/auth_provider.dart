@@ -61,7 +61,8 @@ class AuthNotifier extends StateNotifier<AuthStateModel> {
       state = state.copyWith(
         isAuthenticated: false,
         isLoading: false,
-        error: 'This Google account is not approved for Prompt Master.',
+        error:
+            'This Google account is not approved for Cyfur Opportunity Studio.',
       );
     } on FirebaseException catch (error) {
       await _authService.signOut();
@@ -69,7 +70,7 @@ class AuthNotifier extends StateNotifier<AuthStateModel> {
         isAuthenticated: false,
         isLoading: false,
         error: error.code == 'permission-denied'
-            ? 'This Google account is not approved for Prompt Master.'
+            ? 'This Google account is not approved for Cyfur Opportunity Studio.'
             : 'Could not verify access. Please try again.',
       );
     }

@@ -1,6 +1,6 @@
-# PromptMaster Frontend
+# Cyfur Opportunity Studio
 
-Flutter web app for PromptMaster. The production app is Firebase-only: Firebase
+Flutter web app for Cyfur Opportunity Studio. The production app is Firebase-only: Firebase
 Authentication handles Google login, Firestore enforces the intern allowlist,
 and Firebase Hosting serves the static Flutter build. Prompt templates are
 generated locally, so no FastAPI server is required.

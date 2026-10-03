@@ -26,6 +26,7 @@ class DashboardScreen extends ConsumerStatefulWidget {
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   final _formKey = GlobalKey<FormState>();
   OutreachFlow _flow = OutreachFlow.linkedin;
+  DeliveryLevel _deliveryLevel = DeliveryLevel.sprint;
   final List<String> _recentTitles = [];
 
   final _linkedinUrl = TextEditingController();
@@ -108,6 +109,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     FocusScope.of(context).unfocus();
     final request = PromptGenerateRequest(
       flow: _flow,
+      deliveryLevel: _deliveryLevel,
       linkedinUrl: _trim(_linkedinUrl),
       companyName: _trim(_companyName),
       website: _trim(_website),
@@ -150,7 +152,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     _additionalNotes.clear();
     _budgetMin.clear();
     _budgetMax.clear();
-    setState(() => _flow = OutreachFlow.linkedin);
+    setState(() {
+      _flow = OutreachFlow.linkedin;
+      _deliveryLevel = DeliveryLevel.sprint;
+    });
     ref.read(promptNotifierProvider.notifier).reset();
   }
 
@@ -196,6 +201,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         _budgetMin.clear();
         _budgetMax.clear();
         break;
+      case OutreachFlow.brainstorm:
+        _companyName.clear();
+        _website.clear();
+        _businessType.clear();
+        _currentProcess.clear();
+        _biggestProblem.clear();
+        _currentSoftware.clear();
+        _targetGoal.clear();
+        _additionalNotes.clear();
+        break;
     }
   }
 
@@ -221,6 +236,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         return 'Generate Cold Message Prompt';
       case OutreachFlow.legacy:
         return 'Generate Digital Audit';
+      case OutreachFlow.brainstorm:
+        return 'Generate Solution Brainstorm';
     }
   }
 
@@ -303,29 +320,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     if (promptState.error == null) return const [];
     return [
       ErrorState(message: promptState.error!),
-      if (promptState.isDuplicate) ...[
-        const SizedBox(height: 8),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: FilledButton.tonalIcon(
-            onPressed: promptState.isLoading ? null : _forcePush,
-            icon: const Icon(Icons.bolt_rounded),
-            label: const Text('Force Push (bypass duplicate)'),
-          ),
-        ),
-      ],
       const SizedBox(height: 12),
     ];
-  }
-
-  Future<void> _forcePush() async {
-    appLog('Dashboard: Force Push tapped');
-    FocusScope.of(context).unfocus();
-    await ref.read(promptNotifierProvider.notifier).forcePush();
-    final generated = ref.read(promptNotifierProvider).generated;
-    if (generated != null) {
-      setState(() => _recentTitles.insert(0, generated.title));
-    }
   }
 
   Widget _buildFormCard(bool loading, {required bool scrollable}) {
@@ -350,6 +346,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   List<Widget> _buildFormFields(bool loading) {
     return [
       ..._buildFlowSpecificFields(),
+      const SizedBox(height: 22),
+      _buildDeliveryLevelSection(),
       const SizedBox(height: 20),
       OutlinedButton.icon(
         onPressed: _resetActiveForm,
@@ -379,7 +377,132 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         return _buildColdOutreachFields();
       case OutreachFlow.legacy:
         return _buildLegacyFields();
+      case OutreachFlow.brainstorm:
+        return _buildBrainstormFields();
     }
+  }
+
+  Widget _buildDeliveryLevelSection() {
+    return FormSection(
+      title: 'Delivery level',
+      subtitle: 'Keeps every recommendation inside Cyfur delivery guardrails',
+      icon: Icons.tune_rounded,
+      children: [
+        DropdownButtonFormField<DeliveryLevel>(
+          initialValue: _deliveryLevel,
+          decoration: const InputDecoration(
+            labelText: 'Recommendation scope',
+            prefixIcon: Icon(Icons.speed_rounded),
+          ),
+          items: DeliveryLevel.values
+              .map((level) => DropdownMenuItem(
+                    value: level,
+                    child: Text(level.label),
+                  ))
+              .toList(),
+          onChanged: (level) {
+            if (level != null) setState(() => _deliveryLevel = level);
+          },
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Larger ideas are automatically separated into later phases so outreach stays credible.',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+      ],
+    );
+  }
+
+  List<Widget> _buildBrainstormFields() {
+    return [
+      FormSection(
+        title: 'Solution brainstorm',
+        subtitle: 'Turn evidence and lead context into realistic Cyfur offers',
+        icon: Icons.lightbulb_outline_rounded,
+        children: [
+          AppTextField(
+            controller: _companyName,
+            focusNode: _companyNameFocus,
+            label: 'Company or Lead Name',
+            hintText: 'Acme Corp',
+            prefixIcon: Icons.business_outlined,
+            textInputAction: TextInputAction.next,
+            validator: _validateBrainstormSubject,
+            onFieldSubmitted: (_) => _websiteFocus.requestFocus(),
+          ),
+          const SizedBox(height: 12),
+          AppTextField(
+            controller: _website,
+            focusNode: _websiteFocus,
+            label: 'Website or Source URL (optional)',
+            hintText: 'https://example.com',
+            prefixIcon: Icons.language_outlined,
+            keyboardType: TextInputType.url,
+            textInputAction: TextInputAction.next,
+            onFieldSubmitted: (_) => _businessTypeFocus.requestFocus(),
+          ),
+          const SizedBox(height: 12),
+          AppTextField(
+            controller: _businessType,
+            focusNode: _businessTypeFocus,
+            label: 'Industry (optional)',
+            hintText: 'Healthcare, logistics, local services...',
+            prefixIcon: Icons.category_outlined,
+            textInputAction: TextInputAction.next,
+            onFieldSubmitted: (_) => _biggestProblemFocus.requestFocus(),
+          ),
+          const SizedBox(height: 12),
+          AppTextField(
+            controller: _biggestProblem,
+            focusNode: _biggestProblemFocus,
+            label: 'Observed Problem or Signal',
+            hintText: 'What did the research reveal?',
+            prefixIcon: Icons.troubleshoot_rounded,
+            maxLines: 4,
+            keyboardType: TextInputType.multiline,
+            textInputAction: TextInputAction.next,
+            onFieldSubmitted: (_) => _currentProcessFocus.requestFocus(),
+          ),
+          const SizedBox(height: 12),
+          AppTextField(
+            controller: _currentProcess,
+            focusNode: _currentProcessFocus,
+            label: 'Current Process (optional)',
+            hintText: 'How they appear to handle it today',
+            prefixIcon: Icons.account_tree_outlined,
+            maxLines: 3,
+            keyboardType: TextInputType.multiline,
+            textInputAction: TextInputAction.next,
+            onFieldSubmitted: (_) => _targetGoalFocus.requestFocus(),
+          ),
+          const SizedBox(height: 12),
+          AppTextField(
+            controller: _targetGoal,
+            focusNode: _targetGoalFocus,
+            label: 'Desired Outcome (optional)',
+            hintText: 'Faster response, fewer errors, clearer reporting...',
+            prefixIcon: Icons.flag_outlined,
+            maxLines: 3,
+            keyboardType: TextInputType.multiline,
+            textInputAction: TextInputAction.next,
+            onFieldSubmitted: (_) => _additionalNotesFocus.requestFocus(),
+          ),
+          const SizedBox(height: 12),
+          AppTextField(
+            controller: _additionalNotes,
+            focusNode: _additionalNotesFocus,
+            label: 'Lead Notes and Evidence (optional)',
+            hintText:
+                'Paste verified observations, constraints, and open questions',
+            prefixIcon: Icons.note_add_outlined,
+            maxLines: 6,
+            keyboardType: TextInputType.multiline,
+            textInputAction: TextInputAction.done,
+            onFieldSubmitted: (_) => _generate(),
+          ),
+        ],
+      ),
+    ];
   }
 
   List<Widget> _buildLinkedInFields() {
@@ -850,6 +973,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         'Fill contact, company, LinkedIn, and website, then tap Generate Cold Message Prompt.',
       OutreachFlow.legacy =>
         'Paste a business URL, then tap Generate Digital Audit. Run Stages 1–5 in the same AI chat (web search on).',
+      OutreachFlow.brainstorm =>
+        'Add the lead evidence and observed problem, choose a delivery level, then generate realistic solution ideas and a pitch.',
     };
 
     final card = Card(
@@ -907,6 +1032,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   String? _validateAuditWebsite(String? value) {
     final website = value?.trim() ?? '';
     if (website.isEmpty) return 'Business URL is required';
+    return null;
+  }
+
+  String? _validateBrainstormSubject(String? value) {
+    if ((value?.trim() ?? '').isEmpty && _trim(_website).isEmpty) {
+      return 'Enter a company name or source URL';
+    }
     return null;
   }
 
