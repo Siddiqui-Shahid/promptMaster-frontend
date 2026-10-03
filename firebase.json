@@ -15,6 +15,7 @@
     "rules": "firestore.rules"
   },
   "hosting": {
+    "site": "cyfur-opportunity-studio",
     "public": "build/web",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [

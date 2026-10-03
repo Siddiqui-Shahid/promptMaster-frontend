@@ -5,7 +5,7 @@ Authentication handles Google login, Firestore enforces the intern allowlist,
 and Firebase Hosting serves the static Flutter build. Prompt templates are
 generated locally, so no FastAPI server is required.
 
-**Live:** https://asdasdasdasdasdasdertghrh.web.app
+**Live:** https://cyfur-opportunity-studio.web.app
 
 ## Setup
 
