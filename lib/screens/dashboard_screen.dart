@@ -292,13 +292,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Expanded(
-                    flex: 4,
-                    child: _buildFormCard(promptState.isLoading,
-                        scrollable: true)),
+                  flex: 4,
+                  child: _buildFormCard(
+                    promptState.isLoading,
+                    scrollable: true,
+                  ),
+                ),
                 const SizedBox(width: 16),
                 Expanded(
-                    flex: 5,
-                    child: _buildOutputPane(promptState, expand: true)),
+                  flex: 5,
+                  child: _buildOutputPane(promptState, expand: true),
+                ),
               ],
             ),
           ),
@@ -395,10 +399,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             prefixIcon: Icon(Icons.speed_rounded),
           ),
           items: DeliveryLevel.values
-              .map((level) => DropdownMenuItem(
-                    value: level,
-                    child: Text(level.label),
-                  ))
+              .map(
+                (level) =>
+                    DropdownMenuItem(value: level, child: Text(level.label)),
+              )
               .toList(),
           onChanged: (level) {
             if (level != null) setState(() => _deliveryLevel = level);
@@ -509,14 +513,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return [
       FormSection(
         title: 'LinkedIn prospect',
-        subtitle: 'Paste an executive profile URL',
+        subtitle: 'Paste a profile or company page URL',
         icon: Icons.person_search_outlined,
         children: [
           AppTextField(
             controller: _linkedinUrl,
             focusNode: _linkedinUrlFocus,
-            label: 'LinkedIn Profile URL',
-            hintText: 'https://www.linkedin.com/in/username',
+            label: 'LinkedIn URL',
+            hintText: 'https://www.linkedin.com/in/... or /company/...',
             prefixIcon: Icons.link,
             keyboardType: TextInputType.url,
             textInputAction: TextInputAction.next,
@@ -638,8 +642,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         subtitle: isColdCall
             ? 'Company name required — all other fields optional'
             : nameRequired
-                ? 'Contact and company details for personalized script'
-                : 'Company and LinkedIn details — name optional if unknown',
+            ? 'Contact and company details for personalized script'
+            : 'Company and LinkedIn details — name optional if unknown',
         icon: Icons.person_search_outlined,
         children: [
           AppTextField(
@@ -689,8 +693,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           AppTextField(
             controller: _website,
             focusNode: _websiteFocus,
-            label:
-                isColdCall ? 'Company Website (optional)' : 'Company Website',
+            label: isColdCall
+                ? 'Company Website (optional)'
+                : 'Company Website',
             hintText: isColdCall
                 ? 'Leave blank to discover via research'
                 : 'https://example.com',
@@ -787,9 +792,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         title: 'Budget (optional)',
         subtitle: 'Caps development recommendations in INR',
         icon: Icons.payments_outlined,
-        children: [
-          _buildBudgetRow(),
-        ],
+        children: [_buildBudgetRow()],
       ),
       const SizedBox(height: 22),
       FormSection(
@@ -869,8 +872,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Development budget (INR)',
-            style: Theme.of(context).textTheme.bodyMedium),
+        Text(
+          'Development budget (INR)',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
         const SizedBox(height: 4),
         Text(
           'Optional — min = lowest spend, max = cap. Blank max defaults to ₹2,00,000 in prompt.',
@@ -926,8 +931,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             children: [
               const CircularProgressIndicator(),
               const SizedBox(height: 16),
-              Text('Building your prompt…',
-                  style: Theme.of(context).textTheme.bodyLarge),
+              Text(
+                'Building your prompt…',
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
             ],
           ),
         ),
@@ -944,8 +951,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ? '${generated.title} • ${generated.promptVersion}'
           : 'Email Outreach • Send';
       return PromptOutput(
-        key:
-            ValueKey('output-${_flow.apiValue}-${generated?.title ?? 'empty'}'),
+        key: ValueKey(
+          'output-${_flow.apiValue}-${generated?.title ?? 'empty'}',
+        ),
         title: title,
         prompt: generated?.generatedPrompt ?? '',
         stagePrompts: generated?.stagePrompts ?? const [],
@@ -954,15 +962,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         expand: expand,
         onCopy: () => _copy(),
         onLaunchMessage: (message) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text(message)));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(message)));
         },
       );
     }
 
     final emptyMessage = switch (_flow) {
       OutreachFlow.linkedin =>
-        'Paste a LinkedIn profile URL, then tap Generate LinkedIn Prompt. Run Stage 1 → Stage 2 in the same AI chat.',
+        'Paste a LinkedIn profile or company page URL, then tap Generate LinkedIn Prompt. Run Stage 1 → Stage 2 in the same AI chat.',
       OutreachFlow.email =>
         'Fill prospect details, then tap Generate Email Prompts.',
       OutreachFlow.verification =>
@@ -988,9 +997,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   String? _validateLinkedInUrl(String? value) {
     final url = value?.trim() ?? '';
-    if (url.isEmpty) return 'LinkedIn profile URL is required';
-    if (!url.toLowerCase().contains('linkedin.com/in/')) {
-      return 'Enter a valid LinkedIn profile URL (linkedin.com/in/...)';
+    if (url.isEmpty) return 'LinkedIn URL is required';
+    if (!isSupportedLinkedInUrl(url)) {
+      return 'Enter a valid LinkedIn profile or company URL';
     }
     return null;
   }
@@ -998,8 +1007,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   String? _validateOptionalLinkedInUrl(String? value) {
     final url = value?.trim() ?? '';
     if (url.isEmpty) return null;
-    if (!url.toLowerCase().contains('linkedin.com/in/')) {
-      return 'Enter a valid LinkedIn profile URL (linkedin.com/in/...)';
+    if (!isSupportedLinkedInUrl(url)) {
+      return 'Enter a valid LinkedIn profile or company URL';
     }
     return null;
   }
@@ -1063,8 +1072,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   void _copy() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Prompt copied to clipboard')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Prompt copied to clipboard')));
   }
+}
+
+bool isSupportedLinkedInUrl(String value) {
+  final uri = Uri.tryParse(value.trim());
+  if (uri == null ||
+      !const {'http', 'https'}.contains(uri.scheme.toLowerCase())) {
+    return false;
+  }
+
+  final host = uri.host.toLowerCase();
+  if (host != 'linkedin.com' && !host.endsWith('.linkedin.com')) return false;
+
+  final segments = uri.pathSegments
+      .where((segment) => segment.isNotEmpty)
+      .toList();
+  return segments.length >= 2 &&
+      const {'in', 'company'}.contains(segments.first.toLowerCase());
 }
